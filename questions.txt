@@ -1,0 +1,17 @@
+ questions
+ - code on github
+ - what's in the .mat files
+ - how is nature of new ids decided
+ - what is meaning of burst
+ - main:35 why add every other ccost value together?
+ - sybilStump vs simulation_main_sybilControl
+ 
+ 
+ 
+ conjecture
+ - gen_session, gen_arrival: generates data from a curve?
+ - '1' = good '2' = bad?
+ (in simulation_main_sybilControl)
+ - ccost = array with count of good ids at each time step?
+ - sybil = percentage of system that is controlled by adversary at each time step??
+

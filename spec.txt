@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Jun 16 22:42:14 2018
+
+@author: freya
+"""
+
+PROGRAM SPEC AND DEV NOTES
+
+Data Converter
+1. Takes data in various formats spits out objects that simulator can accept
+2. Export/save objects so it doesn't need to run before every simulation
+Supported Formats:
+    list of entry/exit events
+        for each entry event, create new id
+        for each exit event, update that id to reflect exit time
+        nature???
+    another format which involves a probability curve
+        ???
+
+    
+Simulator
+1. Simulates a network using standardized data from the data converter.
+    a. create initial network from data(0)
+    b. for n = 1 to T:
+        iterate through network and remove those ids whose exit time is n
+        add ids to the network from data(n).
+        update bookkeeping values on size of network, bad ids, etc
+        run algo on network. Algo returns a value which is saved into a results array of size T 
+2. Accepts programs that implement security algorithms, and runs them on simulated network. 
+3. Displays graphs resulting from simulation which may be saved as images.
+4. Exports result data to csv.
+(STRETCH GOAL) GUI for uploading/converting data, running simulation, modifying resulting charts.
+
+Security Algorithm Interface
+
+Defines a standard for python programs that can be called by the simulator and act on the network.
+I will write at least one program, and document what functions are necessary for future programs.
+This allows the simulator to accept one or more of these security algorithms and compare their performance. 
+    run method: takes current state of the network and returns a value to be charted on the Y axis
+    graph method: returns the name of the y axis and other info needed to chart (scale??)
+
+Simulation Data Shape
+    ID objects that know: arrival time, departure time, nature
+    session_arrivals: array of size T + 1. At 0 is a list of the initial session IDs.
+    1-T holds the sessions that are added to the network at that time.
+    
