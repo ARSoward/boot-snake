@@ -1,6 +1,5 @@
 from dataTypes import network_node
 import pickle
-from importlib import import_module
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -10,50 +9,60 @@ Created on Sun Jun 17 14:00:03 2018
 """
 
 # initializer needs more variables
-class network_simulation(object):
+class network(object):
     def __init__(self, initial_state = []):
-        self.sybil_count = 0
+        self.sybil = 0
         self.network_nodes = {} # dictionary so sessions can be looked up by id
-        self.test_interval = 1 # time interval where algo should be called
         for session in initial_state:
             self.add(session)
     def add(self, event):
-        session = network_node(event.sid, self.decide_nature()) 
+        session = network_node(event.sid) 
         self.network_nodes[event.sid] = session 
-        if session.is_good == False:
-            self.sybil_count += 1
     def remove(self, event):
-        node = self.network_nodes.pop(event.sid)
-        if node.is_good == False:
-            self.sybil_count -= 1
+        self.network_nodes.pop(event.sid)
+    def sybil_count(self):
+        return self.sybil
     def good_count(self):
-        return self.total_count - self.sybil_count
-    def total_count(self):
         return len(self.network_nodes)
-    def decide_nature(self):
-        # TODO decide nature of node
-        return True
+    def total_count(self):
+        return self.good_count() + self.sybil_count()
+    def add_sybils(self, number):
+        self.sybil += number
+    def reduce_sybils(self, number):
+        self.sybil =  number
 
 # accepts a pickle file of data from the converter,
-# and a list of algorithms to run on the simulated network.
-def run(pickled_changes, algo, verbose=False):
-    results = []
-    with open(pickled_changes, 'rb') as handle:
-        changes = pickle.load(handle)
-    # TODO initialize list of algos objects to call during simulation
-    print("initializing network")
-    network = network_simulation(changes.at_time(0))
-    print("starting simulation")
-    for i in range(1, changes.time):
-        # update the network at time i
-        for event in changes.at_time(i):
+# and an attack & defencse algo to run on the simulated network.
+class simulation(object):
+    def __init__(self, pickled_changes, algo, attack):
+        print("initializing simulation")
+        with open(pickled_changes, 'rb') as handle:
+            changes = pickle.load(handle)
+        self.changes = changes
+        self.network = network(self.changes.at_time(0))
+        self.algo = algo
+        self.attack = attack
+        self.alpha = attack.alpha
+        self.results = []
+    def run(self, verbose=False):
+        if(self.algo.name is "ccom"):
+            self.algo.get_epochs(self.changes, self.attack, verbose)
+        # TODO initialize list of algos objects to call during simulation
+        print("starting simulation")
+        for i in range(1, self.changes.time):
+            # add bad ids at time i
+            self.attack.add_sybil(self.network, i)
+            
+            # update the network at time i
+            for event in self.changes.at_time(i):
+                self.network.add(event) if event.is_arrival else self.network.remove(event)
+                if verbose:
+                    print(event)
+            # evaluate costs at time i
+            self.results.append(self.algo.evaluate(self.network, self.alpha, i))
             if verbose:
-                print(event)
-            network.add(event) if event.is_arrival else network.remove(event)
-        # call algorithms to evaluate work needed for state of network
-        if i % network.test_interval == 0:
-            if verbose:
-                print("bad ids: "+str(network.sybil_count))
-                print("total ids: "+str(network.total_count()))
-            results.append(algo.evaluate(network))
-    return results
+                print("bad ids: ",self.network.sybil_count())
+                print("total ids: ",self.network.total_count())
+        return self.results
+    def get_results(self):
+        return self.results

@@ -1,6 +1,7 @@
 import tkinter as tk
 import simulator
-from algo.sybil_control import sybil_control
+import algo
+import attack
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -39,31 +40,64 @@ ccost2, sybil2 = sybilstump(n_initial, alpha, session_list, list, new_session_ti
 """
 class gui(object):
     def __init__(self, master):
-        frame = tk.Frame(master)
-        frame.pack()
+        # can't start simulation until these have been defined
+        self.algo = False
+        self.attack = False
+        self.data= False
         
-        self.hello = tk.Label(frame, text="there's a snake in my root!")
+        # set up window
+        master.title("simulator")
+        left = tk.Frame(master)
+        left.pack(side=tk.LEFT)
+        right = tk.Frame(master)
+        right.pack(side=tk.RIGHT)
+    
+        self.hello = tk.Label(right, text="there's a snake in my root!")
         self.hello.pack(side=tk.TOP)
         
-        self.start_b = tk.Button(frame, text="test simulation", fg="green", command=self.start)
-        self.start_b.pack(side=tk.LEFT)
+        self.algo_b = tk.Button(left, text="set algo", fg="green", command=self.define_algo)
+        self.algo_b.pack(side=tk.TOP)
         
-        self.quit_b = tk.Button(frame, text="quit", fg="red", command=frame.quit)
-        self.quit_b.pack(side=tk.RIGHT)
+        self.data_b = tk.Button(left, text="set data", fg="green", command=self.define_data)
+        self.data_b.pack(side=tk.TOP)
+        
+        self.attack_b = tk.Button(left, text="set attack", fg="green", command=self.define_attack)
+        self.attack_b.pack(side=tk.TOP)
+        
+        self.start_b = tk.Button(right, text="start simulation", fg="green", command=self.start)
+        self.start_b.pack(side=tk.TOP)
+        
+        self.quit_b = tk.Button(right, text="quit", fg="red", command=master.quit)
+        self.quit_b.pack(side=tk.BOTTOM)
+    
+    def define_algo(self):
+        # TODO accept input from user
+        self.algo = algo.ccom()
+        
+    def define_data(self):
+        # TODO accept file name
+        self.data = "data.pickle"
+    
+    def define_attack(self):
+        # TODO accept inut from user
+        self.attack = attack.burst(1/10, 30)
         
     def start(self):
-        # instantiate algo. 
-        # TODO: offer list from algo folder
-        algorithm = sybil_control()
-        # run expt. 
-        # TODO: accept file name
-        results = simulator.run("data.pickle",algorithm)
-        # TODO: graph results
-        # TODO: export results
-        print("results: ", results)
-        
+        # create and run expt.
+        if not self.algo or not self.data or not self.attack:
+            print("must define parameters")
+            return
+        try:
+            sim = simulator.simulation(pickled_changes=self.data, algo=self.algo, attack=self.attack)
+            results = sim.run(verbose=False)
+            # TODO: graph results
+            # TODO: export results
+            print("results: ", results)
+        except Exception as e:
+            # TODO handle errors properly
+            raise Exception(e)
 
-
+# running the gui
 root = tk.Tk()
 gui = gui(root)
 root.mainloop()

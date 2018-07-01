@@ -32,6 +32,7 @@ def export(result, filename="data"):
         pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
 # TODO take input from a file
-session_list = [[1, 0, 4], [2, 6, 10], [3, 2, 14]]
+session_list = [[1, 0, 4], [2, 6, 10], [3, 4, 14], [4, 0, 5], [5, 2, 8], [6, 3, 14]]
 result = convert_list(session_list, 10)
+print(result.net)
 export(result)

@@ -35,12 +35,14 @@ class network_event(object):
 # of events that should occur at that point in time in the simulated network.
 class network_changes(object):
     def __init__(self, time):
-        self.events = {n: [] for n in range(time+1)}
         self.time = time+1
+        self.events = {n: [] for n in range(self.time)}
+        self.net = [0] * (self.time) # net change is initialzed to 0 for each time step
     def add_event(self, time, sid, is_arrival):
         if time < self.time:
             event = network_event(sid, is_arrival)
             self.events[time].append(event)
+            self.net[time] += 1 if is_arrival else -1
     def add_departure(self, sid, time):
         self.add_event(time, sid, False)
     def add_arrival(self, sid, time):
