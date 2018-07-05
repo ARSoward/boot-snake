@@ -76,11 +76,11 @@ class gui(object):
         
     def define_data(self):
         # TODO accept file name
-        self.data = "data.pickle"
+        self.data = "newdatadist.pickle"
     
     def define_attack(self):
-        # TODO accept inut from user
-        self.attack = attack.burst(1/10, 30)
+        # TODO accept input from user
+        self.attack = attack.burst(1/10, 666)
         
     def start(self):
         # create and run expt.
@@ -89,7 +89,7 @@ class gui(object):
             return
         try:
             sim = simulator.simulation(pickled_changes=self.data, algo=self.algo, attack=self.attack)
-            results = sim.run(verbose=False)
+            results = sim.run(verbose=True)
             # TODO: graph results
             # TODO: export results
             print("results: ", results)

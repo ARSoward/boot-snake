@@ -5,6 +5,15 @@ import math
 Created on Sat Jun 30 14:15:14 2018
 
 @author: freya
+
+Control algorithms must have the following methods to work with the simulator:
+    set_vars(changes, attack, [verbose]): 
+        save any variables that the algorithm needs for determining costs, purge times, etc
+        
+    evaluate(network, time): based on the state of the network at this time,
+        purge bad IDs if necessary using network.reduce_sybils(value)
+        and return the cost to users at this time.
+        
 """
 # n = number of ids in the  system
 # g = 0 good ids 
@@ -35,53 +44,63 @@ Created on Sat Jun 30 14:15:14 2018
 # if n1 = 0 (nobody in system) 
     # cost is 0
 # else cost = 100*ns/n1 (bad ids / total ids expressed as a percentage)
+def purge(good, bad, alpha):
+    new_sybil_count = math.ceil(good / (1 - alpha))
+    return min(bad, new_sybil_count) 
+"""
+sybilControl gives a purge test every 5 seconds.
+"""
 class sybil_control(object):
     def __init__(self):
-        # TODO store local variables
-        # such as alpha
         self.name = "sybilControl"
-    # sybilControl gives a purge test every 5 seconds.
-    # purge will reduce the # of sybil ids.
-    def evaluate(self,network,alpha,time):
-        return 100*network.sybil_count()/network.total_count()
+        self.alpha = 0
+        
+    def set_vars(self, changes, attack, verbose):
+        self.alpha = attack.alpha
+        
+    def evaluate(self,network,time):
+        if time % 5 == 0:
+            new_count = purge(network.good_count(), network.sybil_count(), self.alpha)
+            network.reduce_sybils_to(new_count)
+            return 100*network.sybil_count()/network.total_count() # from matlab file
+        return 0
         
 class ccom(object):
     def __init__(self):
-        # TODO store local variables
-        # such as alpha
         self.name = "ccom"
         self.epochs = []
-    def evaluate(self, network, alpha, time):
+        self.alpha = 0
+        
+    def evaluate(self, network, time):
         # TODO implement entry costs
         # this is just the purge cost
         if self.epochs.__contains__(time):
-            new_sybil_count = math.ceil(alpha * network.sybil_count() / 3)
-            network.reduce_sybils(new_sybil_count)    
+            new_count = purge(network.good_count(), network.sybil_count(), self.alpha)
+            network.reduce_sybils_to(new_count)
             return network.total_count()
         return 0
+    
+    def set_vars(self, changes, attack, verbose):
+        self.get_epochs(changes, attack, verbose)
+        self.alpha = attack.alpha
+        
+    # helper functions
     def get_epochs(self, changes, attack, verbose=False):
         # size of network at time 0
-        initial_size = changes.net[0]
-        current_size = initial_size
+        initial_size = changes.at_time(0)
+        good_count = initial_size
         sybil_count = 0
-        if verbose: print("initial size: ", initial_size)
-        for time in range(1, changes.time):
+        # if verbose: print("initial size: ", initial_size)
+        for time in range(0, changes.end_time):
             # add up changes until size increases or decreases by 1/3
             sybil_count += attack.changes_at(time)
-            current_size += (changes.net[time] + attack.changes_at(time))
-            if verbose: print("current size: ", current_size)
-            if abs(initial_size - current_size) >= initial_size/3:
+            good_count += changes.at_time(time)
+            if abs(initial_size - sybil_count - good_count) >= initial_size/3:
                 # save this time as an epoch
-                if verbose:
-                    print("new epoch at ", time)
-                    print("\n")
                 self.epochs.append(time)
                 # purge and reset sybil count and initial size
-                new_sybil_count = math.ceil(attack.alpha * sybil_count / 3)
-                current_size -= (sybil_count - new_sybil_count)
-                sybil_count = new_sybil_count
-                initial_size = current_size
-                if verbose: print("initial size: ", initial_size)
+                sybil_count = purge(good_count, sybil_count, attack.alpha)
+                initial_size = good_count + sybil_count
         if verbose: print("set epochs: ", self.epochs)
         
     
