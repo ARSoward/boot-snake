@@ -1,4 +1,5 @@
 import tkinter as tk
+import matplotlib.pyplot as plt
 import simulator
 import algo
 import attack
@@ -41,20 +42,82 @@ ccost2, sybil2 = sybilstump(n_initial, alpha, session_list, list, new_session_ti
 class gui(object):
     def __init__(self, master):
         # can't start simulation until these have been defined
-        self.algo = False
+        self.algo1 = False
+        self.algo2 = False
         self.attack = False
         self.data= False
         
-        # set up window
-        master.title("simulator")
+        self.draw_window(master)
+        
+    
+    def define_algo(self):
+        # TODO accept input from user
+        self.algo1 = algo.ccom()
+        self.algo2 = algo.sybil_control()
+        
+        
+    def define_data(self):
+        # TODO accept file name
+        self.data= "small.pickle"
+        self.data = "newdatadist.pickle"
+    
+    def define_attack(self):
+        # TODO accept input from user
+        # self.attack = attack.burst(alpha=1/4, attack_size=3333, interval_fractions=(1, 1)) # no attack
+        self.attack = attack.burst(alpha=1/4, attack_size=3333, interval_fractions=(1/2, 1)) # attack after first 1/4
+
+    def quick_start(self):
+        self.define_data()
+        self.define_algo()
+        self.define_attack()
+        self.start()
+    
+    def start(self):
+        # create and run expt.
+        if not self.algo1 or not self.data or not self.attack:
+            print("must define parameters")
+            return
+        try:
+            print("running {} simulation...".format(self.algo1.name))
+            sim = simulator.simulation(pickled_changes=self.data, algo=self.algo1, attack=self.attack)
+            sim.run(verbose=True)
+            
+            if self.algo2:
+                print("running {} simulation...".format(self.algo2.name))
+                sim2 = simulator.simulation(pickled_changes=self.data, algo=self.algo2, attack=self.attack)
+                sim2.run(verbose=True)
+                sim1cost, bad = sim.get_cumulative_results()
+                sim2cost, bad = sim2.get_cumulative_results()
+                self.plot_results(data=[sim1cost, sim2cost, bad], labels=[self.algo1.name, self.algo2.name, "cost to adversary"])
+                
+            else:  
+                self.plot_results(data=sim.get_changes(), labels=["symmetric difference","net changes"])
+                self.plot_results(data=sim.get_cumulative_results(), labels=[self.algo1.name, "cost to adversary"])
+            # TODO: export results
+        except Exception as e:
+            # TODO handle errors properly
+            raise
+    
+    # TODO accept 1 or more data,label pairs
+    def plot_results(self, data, labels):
+        line1, line2, line3 = data
+        label1, label2, label3 = labels
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(line1, label=label1)
+        ax.plot(line2, label=label2)
+        ax.plot(line3, label=label3)
+        ax.set_yscale('log')
+        plt.legend()
+        plt.show()
+    
+    def draw_window(self, master):
+        master.title("BOOTS")
         left = tk.Frame(master)
         left.pack(side=tk.LEFT)
         right = tk.Frame(master)
         right.pack(side=tk.RIGHT)
     
-        self.hello = tk.Label(right, text="there's a snake in my root!")
-        self.hello.pack(side=tk.TOP)
-        
         self.algo_b = tk.Button(left, text="set algo", fg="green", command=self.define_algo)
         self.algo_b.pack(side=tk.TOP)
         
@@ -64,38 +127,15 @@ class gui(object):
         self.attack_b = tk.Button(left, text="set attack", fg="green", command=self.define_attack)
         self.attack_b.pack(side=tk.TOP)
         
+        self.quick_b = tk.Button(right, text="quick start", fg="yellow", command=self.quick_start)
+        self.quick_b.pack(side=tk.TOP)
+        
         self.start_b = tk.Button(right, text="start simulation", fg="green", command=self.start)
         self.start_b.pack(side=tk.TOP)
         
         self.quit_b = tk.Button(right, text="quit", fg="red", command=master.quit)
         self.quit_b.pack(side=tk.BOTTOM)
-    
-    def define_algo(self):
-        # TODO accept input from user
-        self.algo = algo.ccom()
         
-    def define_data(self):
-        # TODO accept file name
-        self.data = "newdatadist.pickle"
-    
-    def define_attack(self):
-        # TODO accept input from user
-        self.attack = attack.burst(1/10, 666)
-        
-    def start(self):
-        # create and run expt.
-        if not self.algo or not self.data or not self.attack:
-            print("must define parameters")
-            return
-        try:
-            sim = simulator.simulation(pickled_changes=self.data, algo=self.algo, attack=self.attack)
-            results = sim.run(verbose=True)
-            # TODO: graph results
-            # TODO: export results
-            print("results: ", results)
-        except Exception as e:
-            # TODO handle errors properly
-            raise Exception(e)
 
 # running the gui
 root = tk.Tk()

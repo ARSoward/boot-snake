@@ -5,6 +5,35 @@ Created on Sat Jun 16 22:42:14 2018
 
 @author: freya
 """
+TODO
+- get newdat1.dat file
+- find initial size of network
+- update docs
+
+
+
+ATTACK
+
+
+DEFENSE
+- double check logic
+- update improved ccom
+- calculate churn over epoch
+
+
+SIMULATOR
+- results array should be stored as a memmap
+- use matplotlib to plot results
+- save as CSV
+
+CONVERTER
+- add command line arguments for .mat file conversion
+
+GUI (lowest priority)
+- accept input from user for selecting attack, defense, and importing data
+- add exception handling w/informative error messages sent to GUI
+
+
 
 PROGRAM SPEC AND DEV NOTES
 
