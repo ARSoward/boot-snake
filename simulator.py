@@ -66,19 +66,19 @@ class simulation(object):
         for i in range(1, self.changes.end_time):
             self.network.current_churn = self.changes.total_at_time(i) + self.attack.sybils_added_at(i)
             # add bad ids to network at time i
-            bad_entry_cost = self.attack.sybils_added_at(i)
-            self.network.add_sybils(bad_entry_cost)
+            bad_entry_cost = self.algo.get_entry_costs(self.attack.sybils_added_at(i))
+            self.network.add_sybils(self.attack.sybils_added_at(i))
             # add/remove good ids to network at time i
-            good_entry_cost = self.changes.arrivals_at_time(i)
+            good_entry_cost = self.algo.get_entry_costs(self.changes.arrivals_at_time(i))
             self.network.add_good_ids(self.changes.net_at_time(i))
             # evaluate purge costs to good ids and adversary at time i
             good_cost, bad_cost = self.algo.evaluate(self.network, i)
             # append to results array
             self.good_costs.append(good_cost + good_entry_cost)
             self.bad_costs.append(bad_cost + bad_entry_cost)
-            # print("good pays {} for purge and {} entry cost".format(good_cost, good_entry_cost))
             self.net_changes.append(self.changes.net_at_time(i) + bad_entry_cost)
             self.total_changes.append(self.changes.total_at_time(i) + bad_entry_cost)
+            # print("good pays {} for purge and {} entry cost".format(good_cost, good_entry_cost))
             #TODO results array should also go in a memmap
         self.changes.close_events()
         return self.good_costs, self.bad_costs
