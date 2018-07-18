@@ -1,5 +1,6 @@
 import tkinter as tk
 import matplotlib.pyplot as plt
+import matplotlib.backends.backend_tkagg as agg 
 import simulator
 import algo
 import attack
@@ -9,35 +10,6 @@ import attack
 Created on Fri Jun 15 18:14:47 2018
 
 @author: freya
-
-inputs:
-    n_initial (scalar, number of IDs in the network initially.)
-    alpha (computational power of the adversary)
-    new_arrival = arrival (??? passed to sybil stump)
-    
-    # 2 x n_initial list containing session time of initial IDs
-    # used to generate list which is passed to both simulations
-    initial_session_time = session_list
-    
-
-    new_session_time = session_new_list
-    
-    T (time, size of resulting ccost and sybil arrays)
-    nat (probability of good ID joining???)
-    s (scalar: time steps after which tests need to be performed )
-    returns ccost 1,2 and sybil 1,2
-
-# initialize list of IDs initally in the system
-# is ids from initial_session_time's second row, w ones in top row
-list = 2x n_initial array of ones
-for each entry in list:
-    list(i,2) = initial_session_time(i,2)
-
-# the experiment
-ccost1, sybil1 = simulation(n_initial, alpha, session_list, list, arrival, s, nat, T)
-ccost2, sybil2 = sybilstump(n_initial, alpha, session_list, list, new_session_time, new_arrival, T, nat)
-
-# build charts   
 """
 class gui(object):
     def __init__(self, master):
@@ -45,78 +17,78 @@ class gui(object):
         self.algo1 = False
         self.algo2 = False
         self.attack = False
-        self.data= False
+        self.data = False
         
         self.draw_window(master)
         
-    
-    def define_algo(self):
-        # TODO accept input from user
-        self.algo1 = algo.ccom()
-        self.algo2 = algo.sybil_control()
+    def define_algo(self, algos):
+        # TODO accept input from user: checkboxes
+        self.algos = algos
         
         
-    def define_data(self):
-        # TODO accept file name
-        self.data= "small.pickle"
-        self.data = "newdatadist.pickle"
+    def define_data(self, data):
+        # TODO accept file path/name
+        self.data = data
     
-    def define_attack(self):
-        # TODO accept input from user
+    def define_attack(self, alpha, size, fractions):
+        # TODO accept input from user: radio buttons
         # self.attack = attack.burst(alpha=1/4, attack_size=3333, interval_fractions=(1, 1)) # no attack
-        self.attack = attack.burst(alpha=1/4, attack_size=3333, interval_fractions=(1/2, 1)) # attack after first 1/4
+        self.attack = attack.burst(alpha, size, fractions) # attack after first 1/4
 
     def quick_start(self):
-        self.define_data()
-        self.define_algo()
-        self.define_attack()
+        self.define_data("small.pickle")
+        self.define_data("newdatadist.pickle")
+        self.define_algo([algo.ccom(), algo.sybil_control()])
+        self.define_attack(alpha=1/10, size=3000, fractions=(1/2, 1))
         self.start()
     
     def start(self):
         # create and run expt.
-        if not self.algo1 or not self.data or not self.attack:
-            print("must define parameters")
-            return
         try:
-            print("running {} simulation...".format(self.algo1.name))
-            sim = simulator.simulation(pickled_changes=self.data, algo=self.algo1, attack=self.attack)
-            sim.run(verbose=True)
-            
-            if self.algo2:
-                print("running {} simulation...".format(self.algo2.name))
-                sim2 = simulator.simulation(pickled_changes=self.data, algo=self.algo2, attack=self.attack)
-                sim2.run(verbose=True)
-                sim1cost, bad = sim.get_cumulative_results()
-                sim2cost, bad = sim2.get_cumulative_results()
-                self.plot_results(data=[sim1cost, sim2cost, bad], labels=[self.algo1.name, self.algo2.name, "cost to adversary"])
-                
-            else:  
-                self.plot_results(data=sim.get_changes(), labels=["symmetric difference","net changes"])
-                self.plot_results(data=sim.get_cumulative_results(), labels=[self.algo1.name, "cost to adversary"])
+            results = []
+            for alg in self.algos:
+                print("running {} simulation...".format(alg.name))
+                sim = simulator.simulation(pickled_changes=self.data, algo=alg, attack=self.attack)
+                sim.run(verbose=True)
+                g_cost, b_cost = sim.get_cumulative_results()
+                results.append({'data': g_cost, 'label': alg.name})
+            results.append({'data': b_cost, 'label': 'cost to adversary'})
+            self.plot_results(results)
             # TODO: export results
+        except AttributeError as e:
+            print('must define parameters')
+        except FileNotFoundError as e:
+            print('unable to open data file')
         except Exception as e:
             # TODO handle errors properly
             raise
     
-    # TODO accept 1 or more data,label pairs
-    def plot_results(self, data, labels):
-        line1, line2, line3 = data
-        label1, label2, label3 = labels
+    def plot_results(self, graphs):
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.plot(line1, label=label1)
-        ax.plot(line2, label=label2)
-        ax.plot(line3, label=label3)
         ax.set_yscale('log')
+        for graph in graphs:
+            ax.plot(graph.get('data'), label=graph.get('label'))
         plt.legend()
-        plt.show()
+        results = agg.FigureCanvasTkAgg(fig, master=self.canvas)
+        results.draw()
+        results.get_tk_widget().pack()
     
     def draw_window(self, master):
         master.title("BOOTS")
-        left = tk.Frame(master)
+        
+        settings = tk.Frame(master)
+        settings.pack(side=tk.TOP)
+        left = tk.Frame(settings)
         left.pack(side=tk.LEFT)
-        right = tk.Frame(master)
+        right = tk.Frame(settings)
         right.pack(side=tk.RIGHT)
+        
+        graph = tk.Frame(master)
+        graph.pack(side=tk.BOTTOM)
+        self.canvas = graph
+        
+        
     
         self.algo_b = tk.Button(left, text="set algo", fg="green", command=self.define_algo)
         self.algo_b.pack(side=tk.TOP)
