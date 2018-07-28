@@ -86,11 +86,9 @@ class gui(object):
         self.selected = selected
         for name in selected:
             if name in self.options: self.algos.append(getattr(algo, name)())
-        print("set selected:",self.algos)
        
     def algo_dialog(self):
         w = dialog.algoDialog(self.root, self.options, self.selected)
-        print("selected:",w.selected)
         self.define_algo(w.selected)
         
     def define_attack(self, alpha, size, fractions):

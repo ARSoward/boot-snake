@@ -140,7 +140,6 @@ class dmcom(ccom):
     def evaluate(self, network, time):
         # joins_since_epoch is updated AFTER getting entry costs,
         # because we need joins at t - 1 to calculate 
-        self.joins_since_epoch += network.current_arrivals
         self.time_since_epoch += 1
         
         # update chi hat & reset variables if it's a new epoch
@@ -165,6 +164,7 @@ class dmcom(ccom):
         x = self.chi_hat
         i = self.joins_since_epoch
         m = math.ceil(max(0, x*t - i))
+        self.joins_since_epoch += n
         try:
             if self.verbose: print("n={} t={} x={} i={} m={}".format(n, t, x, i, m))
             # for one join, use plain entry formula
