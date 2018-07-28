@@ -19,7 +19,7 @@ the costs to the users over the length of the simulated network.
 # and an attack & defense algo to run on the simulated network.
 class simulation(object):
     def __init__(self, pickled_changes, algo, attack):
-        print("initializing network")
+        print("\tinitializing network")
         with open(pickled_changes, 'rb') as handle:
             changes = pickle.load(handle)
         self.changes = changes
@@ -32,12 +32,12 @@ class simulation(object):
         self.network = network(self.changes.arrivals_at_time(0))
         
     def run(self, verbose=False):
-        print("initializing attack")
+        print("\tinitializing attack")
         self.attack.set_interval(self.changes.end_time)
-        print("initializing algorithm")
+        print("\tinitializing algorithm")
         self.algo.set_vars(self.changes, self.attack, verbose)
 
-        print("starting simulation")
+        print("\tstarting simulation")
         for i in range(1, self.changes.end_time):
             # bookkeeping for defense algos
             self.network.current_arrivals = len(self.changes.arrivals_at_time(i))+self.attack.sybils_added_at(i)

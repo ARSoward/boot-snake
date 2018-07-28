@@ -115,23 +115,23 @@ class gui(object):
         self.canvas = graph
     
         self.algo_b = tk.Button(settings, text="set algo", bg="#d9e2e1", command=self.algo_dialog)
-        self.algo_b.grid(row=0, column=0, sticky=tk.E)
+        self.algo_b.grid(row=0, column=0, sticky=tk.E, padx=10)
         
         self.data_b = tk.Button(settings, text="set data", bg="#d9e2e1", command=self.data_dialog)
-        self.data_b.grid(row=0, column=1)
+        self.data_b.grid(row=0, column=1, padx=10)
         
         self.attack_b = tk.Button(settings, text="set attack", bg="#d9e2e1", command=self.attack_dialog)
-        self.attack_b.grid(row=0, column=2, sticky=tk.W)
+        self.attack_b.grid(row=0, column=2, sticky=tk.W, padx=10)
         
         self.start_b = tk.Button(actions, text="start simulation", bg="#d9e2e1", fg="#6ac417", command=self.start)
-        self.start_b.grid(row=0, column=0)
+        self.start_b.grid(row=0, column=0, padx=10)
         
         self.export_b = tk.Button(actions, text="export", bg="#d9e2e1", fg="#42a1f4", command=self.export_results)
-        self.export_b.grid(row=0, column=1)
+        self.export_b.grid(row=0, column=1, padx=10)
         
         
         self.quit_b = tk.Button(actions, text="quit", bg="#d9e2e1", fg="#c43117", command=self.root.quit)
-        self.quit_b.grid(row=0, column=2)
+        self.quit_b.grid(row=0, column=2, padx=10)
     
         
 # running the gui
