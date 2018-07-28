@@ -1,10 +1,12 @@
 import tkinter as tk
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_tkagg as agg
+import inspect
 import csv 
 import simulator
 import algo
 import attack
+import dialog
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -17,29 +19,17 @@ the results, and can export the result data to a CSV.
 """
 class gui(object):
     def __init__(self, master):
+        self.init_algos()
         # DEFAULT SIMULATION PARAMETERS
-        self.algos = [algo.dmcom(), algo.ccom()]
-        self.attack = attack.burst(alpha=1/10, attack_size=3333, interval_fractions=(1/2, 1))
+        self.define_algo(["sybil_control"])
+        self.define_attack(alpha=1/10, size=3333, fractions=(1/2, 1))
         self.data = "newdatadist.pickle"
-        self.results = []
-        
-        self.draw_window(master)
-        
-    def define_algo(self, algos):
-        # TODO accept input from user: checkboxes
-        self.algos = algos
-        
-        
-    def define_data(self, data):
-        # TODO accept file path/name
-        self.data = data
-    
-    def define_attack(self, alpha, size, fractions):
-        # TODO accept input from user: radio buttons
-        self.attack = attack.burst(alpha, size, fractions) # attack after first 1/4
+        self.root = master
+        self.draw_window()
     
     def start(self):
         # create and run expt.
+        self.results = []
         try:
             for alg in self.algos:
                 print("running {} simulation...".format(alg.name))
@@ -50,12 +40,12 @@ class gui(object):
                 self.results.append({'data': b_cost, 'label': alg.name+': cost to adversary'})
             self.plot_results()
         except AttributeError as e:
-            print('Error in simulation: ', e)
+            print('Error in simulation:', e)
             raise
         except FileNotFoundError as e:
-            print('Unable to open data file ', self.data)
+            print('Unable to open data file', self.data)
         except Exception as e:
-            print("There was an error: ", e)
+            print("There was an error:", e)
             raise
     
     def plot_results(self):
@@ -67,7 +57,7 @@ class gui(object):
         plt.legend()
         results = agg.FigureCanvasTkAgg(fig, master=self.canvas)
         results.draw()
-        results.get_tk_widget().pack()
+        results.get_tk_widget().pack(side=tk.LEFT)
         
     def export_results(self):
         with open('results.csv', 'w') as csvfile:
@@ -79,35 +69,73 @@ class gui(object):
             for row in rows:
                 writer.writerow(row)
             csvfile.close()
-    
-    def draw_window(self, master):
-        master.title("BOOTS")
+            
+    def data_dialog(self):
+        window = dialog.dataDialog(self.root, self.data)
+        self.data = window.data
         
-        settings = tk.Frame(master)
-        settings.pack(side=tk.TOP)      
-        graph = tk.Frame(master)
-        graph.pack(side=tk.BOTTOM)
+    def init_algos(self):
+        self.options = []
+        for name, obj in inspect.getmembers(algo):
+            if inspect.isclass(obj) and name is not "defense_algorithm": 
+                self.options.append(name)
+                
+    def define_algo(self, selected):
+        # dynamically create algo objects
+        self.algos = []
+        self.selected = selected
+        for name in selected:
+            if name in self.options: self.algos.append(getattr(algo, name)())
+        print("set selected:",self.algos)
+       
+    def algo_dialog(self):
+        w = dialog.algoDialog(self.root, self.options, self.selected)
+        print("selected:",w.selected)
+        self.define_algo(w.selected)
+        
+    def define_attack(self, alpha, size, fractions):
+        self.alpha = alpha
+        self.size = size
+        self.fractions=fractions
+        self.attack = attack.burst(alpha, size, fractions) # attack after first 1/4
+        
+    def attack_dialog(self):
+        w = dialog.attackDialog(self.root, self.alpha, self.size, self.fractions)
+        self.define_attack(w.alpha, w.size, (w.start, w.end))
+        
+    def draw_window(self):
+        self.root.title("BOOTS")
+        self.root.configure(bg="#f4fffd")
+        settings = tk.Frame(self.root, bg="#f4fffd")
+        settings.grid(row=0, sticky="N")
+        
+        actions = tk.Frame(self.root, bg="#f4fffd")
+        actions.grid(row=2, sticky="S")
+        
+        graph = tk.Frame(self.root, width=420, height=280, bg="#f4fffd")
+        graph.grid(row=1)
         self.canvas = graph
     
-        self.algo_b = tk.Button(settings, text="set algo", fg="green", command=self.define_algo)
-        self.algo_b.pack(side=tk.LEFT)
+        self.algo_b = tk.Button(settings, text="set algo", bg="#d9e2e1", command=self.algo_dialog)
+        self.algo_b.grid(row=0, column=0, sticky=tk.E)
         
-        self.data_b = tk.Button(settings, text="set data", fg="green", command=self.define_data)
-        self.data_b.pack(side=tk.LEFT)
+        self.data_b = tk.Button(settings, text="set data", bg="#d9e2e1", command=self.data_dialog)
+        self.data_b.grid(row=0, column=1)
         
-        self.attack_b = tk.Button(settings, text="set attack", fg="green", command=self.define_attack)
-        self.attack_b.pack(side=tk.LEFT)
+        self.attack_b = tk.Button(settings, text="set attack", bg="#d9e2e1", command=self.attack_dialog)
+        self.attack_b.grid(row=0, column=2, sticky=tk.W)
         
-        self.export_b = tk.Button(settings, text="export", fg="blue", command=self.export_results)
-        self.export_b.pack(side=tk.LEFT)
+        self.start_b = tk.Button(actions, text="start simulation", bg="#d9e2e1", fg="#6ac417", command=self.start)
+        self.start_b.grid(row=0, column=0)
         
-        self.start_b = tk.Button(settings, text="start simulation", fg="green", command=self.start)
-        self.start_b.pack(side=tk.LEFT)
+        self.export_b = tk.Button(actions, text="export", bg="#d9e2e1", fg="#42a1f4", command=self.export_results)
+        self.export_b.grid(row=0, column=1)
         
-        self.quit_b = tk.Button(settings, text="quit", fg="red", command=master.quit)
-        self.quit_b.pack(side=tk.LEFT)
         
-
+        self.quit_b = tk.Button(actions, text="quit", bg="#d9e2e1", fg="#c43117", command=self.root.quit)
+        self.quit_b.grid(row=0, column=2)
+    
+        
 # running the gui
 root = tk.Tk()
 gui = gui(root)

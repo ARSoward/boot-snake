@@ -37,8 +37,10 @@ class defense_algorithm(object):
         return 0
     
     def purge(self, good, bad, alpha):
+        # this calculation is for persistent sybils
         # new_sybil_count =  math.ceil(good * alpha) # math.ceil(good / (1 - alpha)) # 
         # return min(bad, new_sybil_count)
+        
         # assume lazy sybils
         return 0
  
