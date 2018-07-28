@@ -92,15 +92,13 @@ class ccom(defense_algorithm):
         # number to the network. Then, update the initial size to the size
         # of the network after the purge.
         
-        # this is not quite right - if an id joins and leaves in the same
-        # epoch (in between purges) it will be counted twice. 
-        
         if self.is_new_epoch(network):
             if(self.verbose): print("new epoch at", time)
             new_count = self.purge(network.good_count(), network.sybil_count(), self.alpha)
             network.reduce_sybils_to(new_count)
             self.initial_id_set = set(network.good)
             self.initial_size = network.total_count()
+            self.initial_sybils = network.sybil_count()
             return network.good_count(), network.sybil_count()
         return 0, 0
         
@@ -108,7 +106,16 @@ class ccom(defense_algorithm):
         return joins
         
     # helper functions
-    def is_new_epoch(self, network):
+    def is_new_epoch(self, network):  
+        self.update_sym_diff(network)
+        if self.sym_diff >= self.initial_size/3:
+            if(self.verbose):
+                print("symmetric difference is {} initial size is {}"
+                      .format(self.sym_diff, len(self.initial_id_set)))
+            return True
+        return False
+    
+    def update_sym_diff(self, network):
         current_ids = network.good
         current_sybils = network.sybil_count()
         # symmetric difference is ids who are in initial set XOR current set,
@@ -116,41 +123,46 @@ class ccom(defense_algorithm):
         self.sym_diff = len(self.initial_id_set.symmetric_difference(current_ids))
         self.sym_diff += abs(current_sybils - self.initial_sybils)
         
-        if self.sym_diff >= self.initial_size/3:
-            if(self.verbose):
-                print("symmetric difference is {} initial size is {}"
-                      .format(self.sym_diff, len(self.initial_id_set)))
-            return True
-        return False
-        
 """
 Similar to ccom, gives a purge test when it detects a new 'epoch' - when the number of ids 
 in the system has increased or decreased by 1/3.
 This improved algorithm also calculates the entry cost based on the amount of 
 churn that occured in the previous epoch.
 """ 
-class dmcom(ccom):
+class gmcom(ccom):
     def __init__(self):
         super().__init__()
-        self.name = "dmcom"
+        self.name = "gmcom"
         self.joins_since_epoch = 0
         self.time_since_epoch = 0
         self.chi_hat = 10000 # TODO ???
-           
-    def evaluate(self, network, time):
-        # joins_since_epoch is updated AFTER getting entry costs,
-        # because we need joins at t - 1 to calculate 
-        self.time_since_epoch += 1
         
-        # update chi hat & reset variables if it's a new epoch
+    def evaluate(self, network, time):
+        # joins_since_epoch is updated when getting entry costs
+        self.time_since_epoch += 1
+
+        # if the network has changed enough for a new epoch,
+        # calculate how many sybils will be left after the purge and apply this
+        # number to the network. 
+        # Then, Update X using the post-purge network state
+        # and reset epoch bookeeping variables.
         if self.is_new_epoch(network):
-            self.chi_hat = self.calc_chi_hat()
-            if(self.verbose): print("new chi_hat: ", self.chi_hat)
+            # purge
+            if(self.verbose): print("new epoch at", time)
+            new_count = self.purge(network.good_count(), network.sybil_count(), self.alpha)
+            network.reduce_sybils_to(new_count)
+            
+            # calcuate X for next epoch
+            self.update_sym_diff(network)
+            self.update_chi_hat(network)
+            
+            # reset epoch counters
+            self.initial_id_set = set(network.good)
+            self.initial_size = network.total_count()
             self.joins_since_epoch = 0
             self.time_since_epoch = 0
-        
-        # after chi hat is updated, evaluate costs to network same as ccom would
-        return super().evaluate(network, time)
+            return network.good_count(), network.sybil_count()
+        return 0, 0
         
     
     def get_entry_costs(self, n):
@@ -180,8 +192,8 @@ class dmcom(ccom):
             raise
     
     # helper functions
-    def calc_chi_hat(self):
-        return self.sym_diff / self.time_since_epoch
+    def update_chi_hat(self, network):
+        self.chi_hat = self.sym_diff / self.time_since_epoch
     
     def calc_entry_cost(self, current_joins):
         return current_joins/self.chi_hat*self.time_since_epoch
